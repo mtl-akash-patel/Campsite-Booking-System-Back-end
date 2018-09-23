@@ -1,4 +1,4 @@
-package pojo;
+package com.akash.campsite.pojo;
 
 /**
  * Created by Kash on 9/23/2018.

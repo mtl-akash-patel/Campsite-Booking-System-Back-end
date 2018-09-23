@@ -1,4 +1,4 @@
-package pojo;
+package com.akash.campsite.pojo;
 
 import java.time.LocalDate;
 

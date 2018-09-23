@@ -4,7 +4,7 @@
         "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
 
 <hibernate-mapping>
-    <class name = "Booking" table = "BOOKINGS">
+    <class name = "com.akash.campsite.pojo.Booking" table = "BOOKINGS">
 
         <meta attribute = "class-description">
             This class contains the booking details.
@@ -15,8 +15,8 @@
         </id>
 
         <property name = "userId" column = "USER_ID" type = "int"/>
-        <property name = "arrivalDate" column = "ARRIVAL_DATE" type = "date"/>
-        <property name = "departureDate" column = "DEPARTURE_DATE" type = "date"/>
+        <property name = "arrivalDate" column = "ARRIVAL_DATE" type = "LocalDate"/>
+        <property name = "departureDate" column = "DEPARTURE_DATE" type = "LocalDate"/>
 
     </class>
 </hibernate-mapping>
