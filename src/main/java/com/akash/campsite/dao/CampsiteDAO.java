@@ -19,6 +19,11 @@ import static com.akash.campsite.utility.CampsiteMessagesUtil.*;
 
 /**
  * Created by Kash on 9/25/2018.
+ *
+ * DAO class for User and Booking entities. HibernateExceptions are caught
+ * in case an error occurs at the database level. The exceptions are then rethrown
+ * with appropriate error messages so that they can be caught by the controller
+ * to send a response with the appropriate response code and error message.
  */
 
 @Repository
@@ -36,38 +41,52 @@ public class CampsiteDAO {
     }
 
     /**
-     * Deletes the booking with the matching bookingId from the database
+     * Deletes the Booking with the matching bookingId from the database.
+     * NotFoundException is thrown if the Booking does not exist. IllegalArgumentException
+     * is thrown when there is an attempt to cancel a past booking.
      *
-     * @param bookingId     bookingId of the booking to delete
+     * @param bookingId             bookingId of the Booking to delete
+     *
+     * @throws NotFoundException    Thrown if the Booking does not exist
      */
-    public void cancelBooking(final int bookingId){
+    public void cancelBooking(final int bookingId) throws NotFoundException {
         final Session session = factory.openSession();
         Transaction transaction = null;
 
-        try {
-            transaction = session.beginTransaction();
-            Booking booking = (Booking)session.get(Booking.class, bookingId);
-            session.delete(booking);
-            transaction.commit();
-        }
-        catch (HibernateException e) {
-            if (transaction != null) {
-                transaction.rollback();
+        if (bookingId > 0 && searchBookingById(bookingId)) {
+            try {
+                transaction = session.beginTransaction();
+                Booking booking = (Booking) session.get(Booking.class, bookingId);
+                session.delete(booking);
+                transaction.commit();
             }
-            e.printStackTrace();
-            throw new HibernateException(BOOKING_ERROR_CANCEL_HIBERNATE + bookingId);
-        } finally {
-            session.close();
+            catch (HibernateException e) {
+                if (transaction != null) {
+                    transaction.rollback();
+                }
+                e.printStackTrace();
+                throw new HibernateException(BOOKING_ERROR_CANCEL_HIBERNATE + bookingId);
+            }
+            catch (PersistenceException e) {
+                // Caught when the user attempts to delete a past Booking
+                e.printStackTrace();
+               throw new IllegalArgumentException(BOOKING_ERROR_CANCEL_PAST + bookingId);
+            } finally {
+                session.close();
+            }
+        }
+        else {
+            throw new NotFoundException(BOOKING_ERROR_CANCEL_NON_EXISTENT + bookingId);
         }
     }
-
 
     /**
      * Creates a new Booking in the database and returns the bookingId
      *
-     * @param userId            Id of the User that created the booking
-     * @param arrivalDate       Beginning on the date range
-     * @param departureDate     End of the date range
+     * @param userId            Id of the User that created the Booking
+     * @param arrivalDate       Booking arrival date
+     * @param departureDate     Booking departure date
+     *
      * @return                  bookingId of the newly created Booking
      */
     public int createBooking(final int userId, final LocalDate arrivalDate, final LocalDate departureDate) {
@@ -99,7 +118,8 @@ public class CampsiteDAO {
      * @param firstName     User's first name
      * @param lastName      User's last name
      * @param email         User's email
-     * @return              The id of the newly created user
+     *
+     * @return              userId of the newly created User
      */
     public int createUser (final String firstName, final String lastName, final String email) {
         Transaction transaction = null;
@@ -128,8 +148,9 @@ public class CampsiteDAO {
     /**
      * Queries the database to get a list of Booking objects within the date range.
      *
-     * @param arrivalDate       Beginning on the date range
-     * @param departureDate     End of the date range
+     * @param arrivalDate       Beginning of the date range query
+     * @param departureDate     End of the date range query
+     *
      * @return                  List of Booking objects with dates within the range
      */
     public List<Booking> getBookingsInDateRange(final LocalDate arrivalDate, final LocalDate departureDate) {
@@ -155,10 +176,11 @@ public class CampsiteDAO {
     }
 
     /**
-     * Returns a boolean value indicating whether a booking with the provided bookingId exists
+     * Returns a boolean value indicating whether a Booking with the provided bookingId exists
      *
      * @param bookingId     bookingId to search for
-     * @return              boolean indicating if the booking was found
+     *
+     * @return              boolean indicating if the Booking was found
      */
     public boolean searchBookingById(final int bookingId) {
         boolean found = false;
@@ -185,11 +207,12 @@ public class CampsiteDAO {
     }
 
     /**
-     * Returns a userId or -1 depending on whether the user with the
+     * Returns a userId or -1 depending on whether the User with the
      * specified email (unique) exists.
      *
      * @param email     User's email
-     * @return          userId if the user exists. Else, -1
+     *
+     * @return          userId if the User exists. Else, -1
      */
     public int searchUserByEmail(final String email) {
         final Session session = factory.openSession();
@@ -215,35 +238,45 @@ public class CampsiteDAO {
     }
 
     /**
+     *  Attempts to update a Booking with a new arrival date and a new departure date.
+     *  A PersistenceException is caught if the new dates are within the range of an existing Booking's dates,
+     *  A NotFoundException is thrown if the Booking does not exist.
      *
-     * @param bookingId
-     * @param arrivalDate
-     * @param departureDate
+     * @param bookingId             bookingId of the Booking to update
+     * @param arrivalDate           New arrivalDate to update
+     * @param departureDate         New departureDate to update
+     *
+     * @throws NotFoundException    Thrown if the Booking does not exist
      */
     public void updateBooking(final int bookingId, final LocalDate arrivalDate, final LocalDate departureDate) throws NotFoundException {
         final Session session = factory.openSession();
         Transaction transaction = null;
 
-        try {
-            transaction = session.beginTransaction();
-            Booking booking = (Booking)session.get(Booking.class, bookingId);
-            if (booking == null) {
-                throw new NotFoundException(BOOKING_ERROR_UPDATE_NON_EXISTENT);
-            }
+        if (bookingId > 0 && searchBookingById(bookingId)) {
+            try {
+                transaction = session.beginTransaction();
+                Booking booking = (Booking) session.get(Booking.class, bookingId);
 
-            booking.setArrivalDate(arrivalDate);
-            booking.setDepartureDate(departureDate);
-            session.update(booking);
-            transaction.commit();
-        }
-        catch (PersistenceException e) {
-            if (transaction != null) {
-                transaction.rollback();
+                if (booking == null) {
+                    throw new NotFoundException(BOOKING_ERROR_UPDATE_NON_EXISTENT);
+                }
+
+                booking.setArrivalDate(arrivalDate);
+                booking.setDepartureDate(departureDate);
+                session.update(booking);
+                transaction.commit();
+            } catch (PersistenceException e) {
+                if (transaction != null) {
+                    transaction.rollback();
+                }
+                e.printStackTrace();
+                throw new HibernateException(BOOKING_ERROR_UPDATE_HIBERNATE + bookingId);
+            } finally {
+                session.close();
             }
-            e.printStackTrace();
-            throw new HibernateException(BOOKING_ERROR_UPDATE_HIBERNATE + bookingId);
-        } finally {
-            session.close();
+        }
+        else {
+            throw new NotFoundException(BOOKING_ERROR_UPDATE_NON_EXISTENT + bookingId);
         }
     }
 }

@@ -50,9 +50,9 @@ USE CAMPSITE;
          $$
 
          DELIMITER $$
-         DROP TRIGGER IF EXISTS DATES_UPDATE_TRIGGER
+         DROP TRIGGER IF EXISTS DATES_UPDATE_TRIGGER_RANGE
          $$
-         CREATE TRIGGER DATES_UPDATE_TRIGGER
+         CREATE TRIGGER DATES_UPDATE_TRIGGER_RANGE
          BEFORE UPDATE ON BOOKINGS
          FOR EACH ROW
          BEGIN
@@ -64,10 +64,10 @@ USE CAMPSITE;
                 SIGNAL SQLSTATE '45000'
                      SET MESSAGE_TEXT = 'The arrival date cannot be on or after the departure date';
             ELSE
-                SET case1Count = (SELECT COUNT(*) FROM BOOKINGS WHERE ARRIVAL_DATE < NEW.ARRIVAL_DATE AND NEW.ARRIVAL_DATE < DEPARTURE_DATE);
-                SET case2Count = (SELECT COUNT(*) FROM BOOKINGS WHERE NEW.ARRIVAL_DATE < ARRIVAL_DATE AND ARRIVAL_DATE < NEW.DEPARTURE_DATE);
-                SET case3Count = (SELECT COUNT(*) FROM BOOKINGS WHERE NEW.ARRIVAL_DATE < ARRIVAL_DATE AND NEW.DEPARTURE_DATE > DEPARTURE_DATE);
-                SET case4Count = (SELECT COUNT(*) FROM BOOKINGS WHERE NEW.ARRIVAL_DATE > ARRIVAL_DATE AND NEW.DEPARTURE_DATE < DEPARTURE_DATE);
+                SET case1Count = (SELECT COUNT(*) FROM BOOKINGS WHERE NEW.BOOKING_ID != BOOKING_ID AND ARRIVAL_DATE < NEW.ARRIVAL_DATE AND NEW.ARRIVAL_DATE < DEPARTURE_DATE);
+                SET case2Count = (SELECT COUNT(*) FROM BOOKINGS WHERE NEW.BOOKING_ID != BOOKING_ID AND NEW.ARRIVAL_DATE < ARRIVAL_DATE AND ARRIVAL_DATE < NEW.DEPARTURE_DATE);
+                SET case3Count = (SELECT COUNT(*) FROM BOOKINGS WHERE NEW.BOOKING_ID != BOOKING_ID AND NEW.ARRIVAL_DATE < ARRIVAL_DATE AND NEW.DEPARTURE_DATE > DEPARTURE_DATE);
+                SET case4Count = (SELECT COUNT(*) FROM BOOKINGS WHERE NEW.BOOKING_ID != BOOKING_ID AND NEW.ARRIVAL_DATE > ARRIVAL_DATE AND NEW.DEPARTURE_DATE < DEPARTURE_DATE);
                 IF ((case1Count + case2Count + case3Count + case4Count) > 0) THEN
                     SIGNAL SQLSTATE '45000'
                         SET MESSAGE_TEXT = 'The campsite is already booked between the requested dates';
@@ -76,5 +76,39 @@ USE CAMPSITE;
          END;
          $$
 
-         #A trigger to make sure that the ARRIVAL_DATE and DEPARTURE_DATE are both in the future were not created
-         #in case the DB gets accidentally wiped out and passed data needs to be restored with a backup.
+         # Trigger to disallow deleting bookings in the past
+         DELIMITER $$
+         DROP TRIGGER IF EXISTS BOOKING_CANCEL_TRIGGER
+         $$
+         CREATE TRIGGER BOOKING_CANCEL_TRIGGER
+         BEFORE DELETE ON BOOKINGS
+         FOR EACH ROW
+         BEGIN
+            IF (OLD.DEPARTURE_DATE < CURDATE()) THEN
+                SIGNAL SQLSTATE '45000'
+                     SET MESSAGE_TEXT = 'Cannot cancel a booking from the past';
+            END IF;
+         END;
+         $$
+
+         # Trigger to disallow updating bookings with past arrival and departure dates to bring them in the future
+         # and to disallow the new dates to be in the past
+         DELIMITER $$
+         DROP TRIGGER IF EXISTS DATES_UPDATE_TRIGGER_PAST
+         $$
+         CREATE TRIGGER DATES_UPDATE_TRIGGER_PAST
+         BEFORE UPDATE ON BOOKINGS
+         FOR EACH ROW
+         BEGIN
+            IF (OLD.DEPARTURE_DATE < CURDATE() OR OLD.ARRIVAL_DATE < CURDATE()) THEN
+                SIGNAL SQLSTATE '45000'
+                     SET MESSAGE_TEXT = 'Cannot update a booking from the past';
+            ELSEIF (NEW.DEPARTURE_DATE < CURDATE() OR NEW.ARRIVAL_DATE < CURDATE()) THEN
+                    SIGNAL SQLSTATE '45000'
+                        SET MESSAGE_TEXT = 'Cannot update a booking so that the arrival and departure dates are in the past';
+            END IF;
+         END;
+         $$
+
+         #A trigger to make sure that the ARRIVAL_DATE and DEPARTURE_DATE are both in the future was not created
+         #in case the DB gets accidentally wiped out and past data needs to be restored with a backup.

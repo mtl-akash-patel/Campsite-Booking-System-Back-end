@@ -16,6 +16,8 @@ import static com.akash.campsite.utility.CampsiteMessagesUtil.*;
 
 /**
  * Created by Kash on 9/22/2018.
+ *
+ * Application REST controller
  */
 
 @RestController
@@ -26,9 +28,12 @@ public class CampsiteRestController {
     private CampsiteService campsiteService;
 
     /**
-     * Rest endpoint for creating a new user
-     * @param user
-     * @return
+     * Rest endpoint for creating a new User. If creating the User was successful, a 201 is returned.
+     * Else, a 400 is returned.
+     *
+     * @param user  User to create
+     *
+     * @return      ResponseEntity with the appropriate status code and content
      */
     @PostMapping (value = "/user")
     public ResponseEntity<String> createUser(@RequestBody User user) {
@@ -44,9 +49,12 @@ public class CampsiteRestController {
     }
 
     /**
-     * Rest endpoint for creating a new booking
-     * @param requestBody
-     * @return
+     * Rest endpoint for creating a new Booking. If creating the Booking was successful, a 201 is returned.
+     * Else, a 400 is returned.
+     *
+     * @param requestBody   Body of the request, should be in a json format
+     *
+     * @return              ResponseEntity with the appropriate status code and content
      */
     @PostMapping (value = "/booking")
     public ResponseEntity<String> createBooking(@RequestBody Map<String, String> requestBody) {
@@ -72,9 +80,12 @@ public class CampsiteRestController {
     }
 
     /**
-     * Rest endpoint for cancelling a booking.
-     * @param bookingId
-     * @return
+     * Rest endpoint for cancelling a booking. If deleting the Booking was successful, a 204 is returned.
+     * If the Booking does not exist, a 404 is returned. A 400 is returned in all other cases something goes wrong.
+     *
+     * @param   bookingId   bookingId of the Booking to cancel
+     *
+     * @return              ResponseEntity with the appropriate status code and content
      */
     @DeleteMapping (value = "/booking/{bookingId}")
     public ResponseEntity<String> deleteBooking(@PathVariable int bookingId ) {
@@ -83,7 +94,7 @@ public class CampsiteRestController {
             campsiteService.attemptToDeleteBooking(bookingId);
             responseEntity = ResponseEntity.status(HttpStatus.NO_CONTENT).body("");
         }
-        catch (HibernateException e) {
+        catch (HibernateException | IllegalArgumentException e) {
             responseEntity = ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
         catch (NotFoundException e) {
@@ -93,10 +104,13 @@ public class CampsiteRestController {
     }
 
     /**
-     * Rest endpoint for getting a string of available dates
-     * @param arrivalDateString
-     * @param departureDateString
-     * @return
+     * Rest endpoint for getting a String of available dates. A 200 is returned if the String of dates was successfully generated.
+     * Otherwise, a 400 is returned.
+     *
+     * @param arrivalDateString     String representation of the beginning of the date range
+     * @param departureDateString   String representation of the end of the date range
+     *
+     * @return                      ResponseEntity with the appropriate status code and content
      */
     @GetMapping(value = "/availability")
     public ResponseEntity<String> getCampsiteAvailability(@RequestParam(value = "arrivalDateString", required = false) String arrivalDateString,  @RequestParam(value = "departureDateString", required = false) String departureDateString) {
@@ -114,11 +128,19 @@ public class CampsiteRestController {
         return responseEntity;
     }
 
+    /**
+     * Rest endpoint for updating a Booking. A 200 is returned if the Booking was successfully updated.
+     * If the Booking does not exist, a 404 is returned. A 400 is returned in all other cases something goes wrong.
+     *
+     * @param bookingId     bpokingId of the Booking to update
+     * @param requestBody   Body of the request, should be in a json format
+     *
+     * @return              ResponseEntity with the appropriate status code and content
+     */
     @PutMapping (value = "/booking/{bookingId}")
     public ResponseEntity<String> updateBooking(@PathVariable int bookingId, @RequestBody Map<String, String> requestBody) {
         ResponseEntity<String> responseEntity;
 
-        //final String bookingIdString =  requestBody.get("bookingId");
         final String arrivalDateString = requestBody.get("arrivalDateString");
         final String departureDateString = requestBody.get("departureDateString");
 

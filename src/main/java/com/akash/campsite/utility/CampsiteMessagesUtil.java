@@ -12,13 +12,15 @@ public class CampsiteMessagesUtil {
 
     public static final String BOOKING_ERROR_CANCEL_HIBERNATE = "An error occurred while attempting to cancel the booking, please try again. Booking Reference: ";
 
+    public static final String BOOKING_ERROR_CANCEL_PAST = "Cannot cancel a booking from the past. Booking Reference: ";
+
     public static final String BOOKING_ERROR_CANCEL_NON_EXISTENT = "Cannot cancel the booking as it does not exist: ";
 
     public static final String BOOKING_ERROR_CREATE_HIBERNATE = "An error occurred while attempting to create the booking. Please make sure the campsite is available on the given dates and try again.";
 
     public static final String BOOKING_ERROR_SEARCH_HIBERNATE = "An error occurred while trying to search for the booking, please try again. Booking Reference: ";
 
-    public static final String BOOKING_ERROR_UPDATE_HIBERNATE = "An error occurred while attempting to update the booking. Please make sure the campsite is available on the given dates and try again. Booking Reference: ";
+    public static final String BOOKING_ERROR_UPDATE_HIBERNATE = "An error occurred while attempting to update the booking. Please make sure the campsite is available on the given dates, that the booking is not in the past, and try again. Booking Reference: ";
 
     public static final String BOOKING_ERROR_UPDATE_NON_EXISTENT = "Cannot update the booking as it does not exist: ";
 

@@ -2,6 +2,8 @@ package com.akash.campsite.controllers;
 
 /**
  * Created by Kash on 9/22/2018.
+ *
+ * Application starting point.
  */
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

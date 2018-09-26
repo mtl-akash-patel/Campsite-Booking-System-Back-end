@@ -26,17 +26,22 @@ public class CampsiteService {
     private CampsiteDAO campsiteDAO;
 
     /**
+     * Attempts to create a new Booking after calling other methods to perform the required validation. A new User
+     * is also created if the User that wishes to create the Booking does not exist yet.
      *
-     * @param firstName
-     * @param lastName
-     * @param email
-     * @param arrivalDateString
-     * @param departureDateString
-     * @return
-     * @throws HibernateException
-     * @throws IllegalArgumentException
+     * @param firstName                     User's first name
+     * @param lastName                      User's last name
+     * @param email                         User's email
+     * @param arrivalDateString             String representation of the arrival date the user wishes to create a Booking for
+     * @param departureDateString           String representation of the departure date the user wishes to create a Booking for
+     *
+     * @return                              Returns the bookingId of the Booking if it is created successfully
+     *
+     * @throws DateTimeParseException       Thrown when the string representation of a date is in an invalid format and cannot be parsed
+     * @throws HibernateException           Thrown when an error occurs at the database level
+     * @throws IllegalArgumentException     Thrown when validating the user fields or the dates fails
      */
-    public int attemptToCreateBooking(final String firstName, final String lastName, final String email, final String arrivalDateString, final String departureDateString) throws HibernateException, IllegalArgumentException {
+    public int attemptToCreateBooking(final String firstName, final String lastName, final String email, final String arrivalDateString, final String departureDateString) throws DateTimeParseException, HibernateException, IllegalArgumentException {
 
         if (!validateString(firstName) || !validateString(lastName) || !validateString(email)) {
             throw new IllegalArgumentException(USER_ERROR_NOT_PROVIDED);
@@ -53,7 +58,7 @@ public class CampsiteService {
 
         int userId = campsiteDAO.searchUserByEmail(email);
 
-        // Check if user exists
+        // Check if User exists
         if (userId == -1) {
             userId = campsiteDAO.createUser(firstName, lastName, email);
         }
@@ -62,12 +67,15 @@ public class CampsiteService {
     }
 
     /**
-     * Attempts to create a new user in the database by first making sure that a User with the same
-     * email does not already exist.
+     * Attempts to create a new User in the database by validating the user data and by first making sure that a User with the same
+     * email does not already exist. An IllegalArgumentException is thrown if User data is not provided or if a User with the same
+     * email already exists.
      *
-     * @param firstName     user's first name
-     * @param lastName      user's last name
-     * @param email         user's email
+     * @param firstName             User's first name
+     * @param lastName              User's last name
+     * @param email                 User's email
+     *
+     * @throws HibernateException   Thrown when an error occurs at the database level
      */
     public void attemptToCreateUser(final String firstName, final String lastName, final String email) throws HibernateException{
 
@@ -75,7 +83,7 @@ public class CampsiteService {
             throw new IllegalArgumentException(USER_ERROR_NOT_PROVIDED);
         }
 
-        // Make sure user does not exist
+        // Make sure User does not exist
         if (campsiteDAO.searchUserByEmail(email) == -1) {
             campsiteDAO.createUser(firstName, lastName, email);
         }
@@ -85,35 +93,31 @@ public class CampsiteService {
     }
 
     /**
-     * Attempts to delete a booking in the database  by first making sure that the booking exists.
-     * In the case it does not, an IllegalArgumentException is propagated to the controller to return an appropriate
-     * message in the response.
+     * Attempts to delete a Booking in the database
      *
-     * @param bookingId             bookingId of the booking to delete
-     * @throws HibernateException   Propagated to the controller to return an appropriate message in case an error occurs
+     * @param bookingId             bookingId of the Booking to delete
+     *
+     * @throws HibernateException       Thrown when an error occurs at the database level
+     * @throws IllegalArgumentException Thrown when there is an attempt to cancel a past booking
+     * @throws NotFoundException        Thrown when the Booking does not exist
      */
-    public void attemptToDeleteBooking(final int bookingId) throws HibernateException, NotFoundException {
-
-        if (bookingId > 0 && campsiteDAO.searchBookingById(bookingId)) {
-            campsiteDAO.cancelBooking(bookingId);
-        }
-        else {
-            throw new NotFoundException(BOOKING_ERROR_CANCEL_NON_EXISTENT + bookingId);
-        }
+    public void attemptToDeleteBooking(final int bookingId) throws HibernateException, NotFoundException, IllegalArgumentException {
+        campsiteDAO.cancelBooking(bookingId);
     }
 
     /**
+     * Attempts to update a Booking after calling other methods to perform the required validation.
      *
-     * @param bookingId
-     * @param arrivalDateString
-     * @param departureDateString
-     * @throws DateTimeParseException
-     * @throws HibernateException
-     * @throws NotFoundException
+     * @param bookingId                 bookingId of thw Booking to update
+     * @param arrivalDateString         String representation of the Booking's new arrival date
+     * @param departureDateString       String representation of the Booking's new departure date
+     *
+     * @throws DateTimeParseException   Thrown when the string representation of a date is in an invalid format and cannot be parsed
+     * @throws IllegalArgumentException Thrown when validating the dates fails
+     * @throws HibernateException       Thrown when an error occurs at the database level
+     * @throws NotFoundException        Thrown when the Booking does not exist
      */
-    public void attemptToUpdateBooking(final int bookingId, final String arrivalDateString, final String departureDateString) throws DateTimeParseException, HibernateException, NotFoundException {
-
-        if (bookingId > 0 && campsiteDAO.searchBookingById(bookingId)) {
+    public void attemptToUpdateBooking(final int bookingId, final String arrivalDateString, final String departureDateString) throws DateTimeParseException, HibernateException, NotFoundException, IllegalArgumentException {
             LocalDate arrivalDate = parseDateString(arrivalDateString);
             LocalDate departureDate = parseDateString(departureDateString);
 
@@ -123,31 +127,28 @@ public class CampsiteService {
 
             validateBookingDateRange(arrivalDate, departureDate);
             campsiteDAO.updateBooking(bookingId, arrivalDate, departureDate);
-        }
-        else {
-            throw new NotFoundException(BOOKING_ERROR_UPDATE_NON_EXISTENT + bookingId);
-        }
     }
 
     /**
      * Returns a comma separated string with dates (YYYY-MM-DD) the campsite can be booked on, based on
      * the date range given.
      *
-     * @param arrivalDateString             String representation of the beginning of the date range
-     * @param departureDateString           String representation of the end of the date range
+     * @param arrivalDateString         String representation of the beginning of the date range
+     * @param departureDateString       String representation of the end of the date range
      *
-     * @return                              Comma separated string with dates (YYYY-MM-DD) the campsite can be booked on,
+     * @return                          Sorted comma separated string with dates (YYYY-MM-DD) the campsite can be booked on,
      *
-     * @throws DateTimeParseException       Propagate the exception to the controller if an error occurred while parsing the string representations of the dates
-     * @throws HibernateException           Propagate the exception to the controller if an error occurred with the database so that
-     *                                      an appropriate message can be sent back.
+     * @throws DateTimeParseException   Thrown when the string representation of a date is in an invalid format and cannot be parsed
+     * @throws IllegalArgumentException Thrown when validating the dates fails
+     * @throws HibernateException       Thrown when an error occurs at the database level
      */
-    public String getBookingAvailability(final String arrivalDateString, final String departureDateString) throws DateTimeParseException, HibernateException {
+    public String getBookingAvailability(final String arrivalDateString, final String departureDateString) throws DateTimeParseException, HibernateException, IllegalArgumentException {
         LocalDate arrivalDate = parseDateString(arrivalDateString);
         LocalDate departureDate = parseDateString(departureDateString);
 
         // Need to validate the dates and make sure they are not null. Cannot put this in a separate method as Java is pass
-        // by value (a new reference would be passed to the method).
+        // by value (a new reference would be passed to the method and making that new reference point to a new LocalDate would not affect the LocalDate variable
+        // in this method).
         boolean needToValidateArrivalDate = true;
         boolean needToValidateDepartureDate = true;
 
@@ -168,6 +169,8 @@ public class CampsiteService {
         }
 
         final List<Booking> bookings = campsiteDAO.getBookingsInDateRange(arrivalDate, departureDate);
+
+        // Using a List instead of a Set for availableDates so that sorting it is easier
         final List<String> availableDates = new ArrayList<>();
         final Set<String> takenDates = new HashSet<>();
 
@@ -186,7 +189,7 @@ public class CampsiteService {
             }
         }
 
-        // Get set of available dates
+        // Get List of available dates
         LocalDate iteratingDate = LocalDate.of(arrivalDate.getYear(), arrivalDate.getMonth(), arrivalDate.getDayOfMonth());
         while (iteratingDate.isBefore(departureDate) || iteratingDate.equals(departureDate)) {
             if (!takenDates.contains(iteratingDate.toString())) {
@@ -195,7 +198,7 @@ public class CampsiteService {
             iteratingDate = iteratingDate.plusDays(1);
         }
 
-        // Sort the List of dates
+        // Sort the List of dates.
         availableDates.sort(new Comparator<String>() {
             DateFormat dateFormat = new SimpleDateFormat("YYYY-MM-DD");
 
@@ -214,15 +217,13 @@ public class CampsiteService {
     }
 
     /**
-     * Attempts to parse the dateString (YYYY-MM-DD) into a LocalDate object. In case
-     * dateString is null or empty, the date is set to the current date.
+     * Attempts to parse the dateString (YYYY-MM-DD) into a LocalDate object.
      *
-     * If parsing is not possible, an exception is propagated upwards
-     * where it will be handled.
+     * @param dateString                String representation of the date to parse
      *
-     * @param dateString
-     * @return
-     * @throws DateTimeParseException
+     * @return                          Null or LocalDate object if the dateString was successfully parsed
+     *
+     * @throws DateTimeParseException   Thrown when parsing the dateString is not possible
      */
     private LocalDate parseDateString(final String dateString) throws DateTimeParseException {
         LocalDate date = null;
@@ -234,10 +235,13 @@ public class CampsiteService {
 
     /**
      * Calls validateDateRange to verify that date range is valid and then verifies that the user is not attempting
-     * to book the campsite for more than 3 days.
+     * to book the campsite for more than 3 days. Throws IllegalArgumentException if the User is attempting to book for
+     * more than 3 days.
      *
-     * @param arrivalDate       Beginning on the date range
-     * @param departureDate     End of the date range
+     * @param arrivalDate               Beginning on the date range
+     * @param departureDate             End of the date range
+     *
+     * @throws IllegalArgumentException Thrown when the date range is not valid
      */
     private void validateBookingDateRange(final LocalDate arrivalDate, final LocalDate departureDate) throws IllegalArgumentException {
         validateDateRange(arrivalDate, departureDate);
@@ -264,9 +268,12 @@ public class CampsiteService {
      *      -date range is not in the past
      *
      * Then calls validateDateRangeMonthConstraint to validate the 1 month constraint.
+     * IllegalArgumentException is thrown when the constraints are not met.
      *
-     * @param arrivalDate           Beginning on the date range
-     * @param departureDate         End of the date range
+     * @param arrivalDate               Beginning on the date range
+     * @param departureDate             End of the date range
+     *
+     * @throws IllegalArgumentException Thrown when the date range is not valid
      */
     private void validateDateRange(LocalDate arrivalDate, LocalDate departureDate) throws IllegalArgumentException {
         LocalDate currentDate = LocalDate.now();
@@ -289,7 +296,7 @@ public class CampsiteService {
     }
 
     /**
-     * Validates that the date range is within 1 month from today
+     * Validates that the date range is within 1 month from today. In case it is not, an IllegalArgumentException is thrown.
      *
      * @param arrivalDate           Beginning on the date range
      * @param departureDate         End of the date range
@@ -307,10 +314,10 @@ public class CampsiteService {
      * Validates a string by checking if it is null or empty.
      *
      * @param s String to validate
-     * @return  boolean indicating whether the string is valid
+     *
+     * @return  Boolean indicating whether the String is valid
      */
     private boolean validateString(final String s) {
-        // Null-safe, short-circuit evaluation.
         return !(s == null || s.trim().isEmpty());
     }
 }
