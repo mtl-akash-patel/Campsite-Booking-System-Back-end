@@ -1,6 +1,7 @@
 package com.akash.campsite.service;
 
 import com.akash.campsite.dao.CampsiteDAO;
+import javassist.NotFoundException;
 import org.hibernate.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,24 +22,6 @@ public class CampsiteService {
 
     @Autowired
     private CampsiteDAO campsiteDAO;
-
-    /**
-     * Attempts to cancel a booking in the database  by first making sure that the booking exists.
-     * In the case it does not, an IllegalArgumentException is propagated to the controller to return an appropriate
-     * message in the response.
-     *
-     * @param bookingId             bookingId of the booking to delete
-     * @throws HibernateException   Propagated to the controller to return an appropriate message in case an error occurs
-     */
-    public void attemptToCancelBooking(final int bookingId) throws HibernateException {
-
-        if (bookingId > 0 && campsiteDAO.searchBookingById(bookingId)) {
-            campsiteDAO.cancelBooking(bookingId);
-        }
-        else {
-            throw new IllegalArgumentException("Cannot cancel the booking as it does not exist.");
-        }
-    }
 
     /**
      *
@@ -92,16 +75,33 @@ public class CampsiteService {
     }
 
     /**
+     * Attempts to delete a booking in the database  by first making sure that the booking exists.
+     * In the case it does not, an IllegalArgumentException is propagated to the controller to return an appropriate
+     * message in the response.
      *
-     * @param bookingIdString
+     * @param bookingId             bookingId of the booking to delete
+     * @throws HibernateException   Propagated to the controller to return an appropriate message in case an error occurs
+     */
+    public void attemptToDeleteBooking(final int bookingId) throws HibernateException, NotFoundException {
+
+        if (bookingId > 0 && campsiteDAO.searchBookingById(bookingId)) {
+            campsiteDAO.cancelBooking(bookingId);
+        }
+        else {
+            throw new NotFoundException("Cannot cancel the booking as it does not exist.");
+        }
+    }
+
+    /**
+     *
+     * @param bookingId
      * @param arrivalDateString
      * @param departureDateString
      * @throws DateTimeParseException
      * @throws HibernateException
-     * @throws NumberFormatException
+     * @throws NotFoundException
      */
-    public void attemptToUpdateBooking(final String bookingIdString, final String arrivalDateString, final String departureDateString) throws DateTimeParseException, HibernateException, NumberFormatException, NullPointerException {
-        int bookingId = Integer.parseInt(bookingIdString);
+    public void attemptToUpdateBooking(final int bookingId, final String arrivalDateString, final String departureDateString) throws DateTimeParseException, HibernateException, NotFoundException {
 
         if (bookingId > 0 && campsiteDAO.searchBookingById(bookingId)) {
             LocalDate arrivalDate = parseDateString(arrivalDateString);
@@ -115,7 +115,7 @@ public class CampsiteService {
             campsiteDAO.updateBooking(bookingId, arrivalDate, departureDate);
         }
         else {
-            throw new IllegalArgumentException("Cannot update the booking as it does not exist.");
+            throw new NotFoundException("Cannot update the booking as it does not exist.");
         }
     }
 

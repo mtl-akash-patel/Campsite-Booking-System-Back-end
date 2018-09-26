@@ -2,6 +2,7 @@ package com.akash.campsite.dao;
 
 import com.akash.campsite.pojo.Booking;
 import com.akash.campsite.pojo.User;
+import javassist.NotFoundException;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -218,7 +219,7 @@ public class CampsiteDAO {
      * @param arrivalDate
      * @param departureDate
      */
-    public void updateBooking(final int bookingId, final LocalDate arrivalDate, final LocalDate departureDate) {
+    public void updateBooking(final int bookingId, final LocalDate arrivalDate, final LocalDate departureDate) throws NotFoundException {
         final Session session = factory.openSession();
         Transaction transaction = null;
 
@@ -226,7 +227,7 @@ public class CampsiteDAO {
             transaction = session.beginTransaction();
             Booking booking = (Booking)session.get(Booking.class, bookingId);
             if (booking == null) {
-                throw new NullPointerException("Cannot update the booking as it does not exist.");
+                throw new NotFoundException("Cannot update the booking as it does not exist.");
             }
 
             booking.setArrivalDate(arrivalDate);
