@@ -1,11 +1,11 @@
 package com.akash.campsite.service;
 
 import com.akash.campsite.dao.CampsiteDAO;
+import com.akash.campsite.pojo.Booking;
 import javassist.NotFoundException;
-import org.hibernate.*;
+import org.hibernate.HibernateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import com.akash.campsite.pojo.Booking;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -13,6 +13,8 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+
+import static com.akash.campsite.utility.CampsiteMessagesUtil.*;
 
 /**
  * Created by Kash on 9/23/2018.
@@ -36,14 +38,18 @@ public class CampsiteService {
      */
     public int attemptToCreateBooking(final String firstName, final String lastName, final String email, final String arrivalDateString, final String departureDateString) throws HibernateException, IllegalArgumentException {
 
+        if (!validateString(firstName) || !validateString(lastName) || !validateString(email)) {
+            throw new IllegalArgumentException(USER_ERROR_NOT_PROVIDED);
+        }
+
         LocalDate arrivalDate = parseDateString(arrivalDateString);
         LocalDate departureDate = parseDateString(departureDateString);
 
         if (arrivalDate == null || departureDate == null) {
-            throw new IllegalArgumentException("Invalid date range: The arrival date and the departure date need to be provided in order to create a booking.");
+            throw new IllegalArgumentException(DATE_ERROR_NOT_PROVIDED);
         }
 
-        validateBoookingDateRange(arrivalDate, departureDate);
+        validateBookingDateRange(arrivalDate, departureDate);
 
         int userId = campsiteDAO.searchUserByEmail(email);
 
@@ -65,12 +71,16 @@ public class CampsiteService {
      */
     public void attemptToCreateUser(final String firstName, final String lastName, final String email) throws HibernateException{
 
+        if (!validateString(firstName) || !validateString(lastName) || !validateString(email)) {
+            throw new IllegalArgumentException(USER_ERROR_NOT_PROVIDED);
+        }
+
         // Make sure user does not exist
         if (campsiteDAO.searchUserByEmail(email) == -1) {
             campsiteDAO.createUser(firstName, lastName, email);
         }
         else {
-            throw new IllegalArgumentException("A user with the provided email already exists: " + email);
+            throw new IllegalArgumentException(USER_ERROR_ALREADY_EXISTS + email);
         }
     }
 
@@ -88,7 +98,7 @@ public class CampsiteService {
             campsiteDAO.cancelBooking(bookingId);
         }
         else {
-            throw new NotFoundException("Cannot cancel the booking as it does not exist.");
+            throw new NotFoundException(BOOKING_ERROR_CANCEL_NON_EXISTENT + bookingId);
         }
     }
 
@@ -108,14 +118,14 @@ public class CampsiteService {
             LocalDate departureDate = parseDateString(departureDateString);
 
             if (arrivalDate == null || departureDate == null) {
-                throw new IllegalArgumentException("Invalid date range: The arrival date and the departure date need to be provided in order to update a booking.");
+                throw new IllegalArgumentException(DATE_ERROR_NOT_PROVIDED);
             }
 
-            validateBoookingDateRange(arrivalDate, departureDate);
+            validateBookingDateRange(arrivalDate, departureDate);
             campsiteDAO.updateBooking(bookingId, arrivalDate, departureDate);
         }
         else {
-            throw new NotFoundException("Cannot update the booking as it does not exist.");
+            throw new NotFoundException(BOOKING_ERROR_UPDATE_NON_EXISTENT + bookingId);
         }
     }
 
@@ -229,7 +239,7 @@ public class CampsiteService {
      * @param arrivalDate       Beginning on the date range
      * @param departureDate     End of the date range
      */
-    private void validateBoookingDateRange(final LocalDate arrivalDate, final LocalDate departureDate) throws IllegalArgumentException {
+    private void validateBookingDateRange(final LocalDate arrivalDate, final LocalDate departureDate) throws IllegalArgumentException {
         validateDateRange(arrivalDate, departureDate);
 
         // Make sure the user is trying to book for a max of 3 days
@@ -243,7 +253,7 @@ public class CampsiteService {
         }
 
         if (numberOfDays > 3) {
-            throw new IllegalArgumentException("Invalid date range: The campsite cannot be booked for more than 3 days.");
+            throw new IllegalArgumentException(DATE_ERROR_RANGE_3_DAYS);
         }
     }
 
@@ -270,11 +280,11 @@ public class CampsiteService {
                 validateDateRangeMonthConstraint(arrivalDate, departureDate);
             }
             else {
-                throw new IllegalArgumentException("Invalid date range: The arrival date must be at least 1 day in advance.");
+                throw new IllegalArgumentException(DATE_ERROR_RANGE_1_DAY_ADVANCE);
             }
         }
         else {
-            throw new IllegalArgumentException("Invalid date range: The arrival date must be before the departure date.");
+            throw new IllegalArgumentException(DATE_ERROR_RANGE_DEPARTURE_BEFORE_ARRIVAL);
         }
     }
 
@@ -284,12 +294,23 @@ public class CampsiteService {
      * @param arrivalDate           Beginning on the date range
      * @param departureDate         End of the date range
      */
-    private void  validateDateRangeMonthConstraint(final LocalDate arrivalDate, final LocalDate departureDate) {
+    private void validateDateRangeMonthConstraint(final LocalDate arrivalDate, final LocalDate departureDate) {
         // Make sure the availability shown is for at most 1 month in the future
         LocalDate futureDate = LocalDate.now().plusMonths(1);
 
         if (arrivalDate.isAfter(futureDate) || departureDate.isAfter(futureDate)) {
-            throw new IllegalArgumentException("Invalid date range: The arrival date and the departure date cannot be more than 1 month in the future.");
+            throw new IllegalArgumentException(DATE_ERROR_RANGE_1_MONTH_ADVANCE);
         }
+    }
+
+    /**
+     * Validates a string by checking if it is null or empty.
+     *
+     * @param s String to validate
+     * @return  boolean indicating whether the string is valid
+     */
+    private boolean validateString(final String s) {
+        // Null-safe, short-circuit evaluation.
+        return !(s == null || s.trim().isEmpty());
     }
 }

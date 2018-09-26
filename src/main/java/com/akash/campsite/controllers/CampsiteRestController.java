@@ -1,16 +1,18 @@
 package com.akash.campsite.controllers;
 
+import com.akash.campsite.pojo.User;
+import com.akash.campsite.service.CampsiteService;
 import javassist.NotFoundException;
 import org.hibernate.HibernateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.akash.campsite.pojo.User;
-import com.akash.campsite.service.CampsiteService;
 
 import java.time.format.DateTimeParseException;
 import java.util.Map;
+
+import static com.akash.campsite.utility.CampsiteMessagesUtil.*;
 
 /**
  * Created by Kash on 9/22/2018.
@@ -33,7 +35,7 @@ public class CampsiteRestController {
         ResponseEntity<String> responseEntity;
         try {
             campsiteService.attemptToCreateUser(user.getFirstName(), user.getLastName(), user.getEmail());
-            responseEntity =  ResponseEntity.status(HttpStatus.CREATED).body("User was successfully created.");
+            responseEntity =  ResponseEntity.status(HttpStatus.CREATED).body(USER_CREATE_SUCCESS);
         }
         catch (IllegalArgumentException | HibernateException e) {
             responseEntity =  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -47,7 +49,7 @@ public class CampsiteRestController {
      * @return
      */
     @PostMapping (value = "/booking")
-    public ResponseEntity<String> createBooking(@PathVariable int userId, @RequestBody Map<String, String> requestBody) {
+    public ResponseEntity<String> createBooking(@RequestBody Map<String, String> requestBody) {
 
         final String firstName = requestBody.get("firstName");
         final String lastName = requestBody.get("lastName");
@@ -58,10 +60,10 @@ public class CampsiteRestController {
 
         ResponseEntity<String> responseEntity;
         try {
-            return  ResponseEntity.status(HttpStatus.CREATED).body("Booking Reference: " + campsiteService.attemptToCreateBooking(firstName, lastName, email, arrivalDateString, departureDateString));
+            return  ResponseEntity.status(HttpStatus.CREATED).body(BOOKING_SUCCESS + campsiteService.attemptToCreateBooking(firstName, lastName, email, arrivalDateString, departureDateString));
         }
         catch (DateTimeParseException e) {
-            responseEntity = ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Please provide a valid format for the arrival and departure dates (YYYY-MM-DD).");
+            responseEntity = ResponseEntity.status(HttpStatus.BAD_REQUEST).body(DATE_ERROR_FORMAT);
         }
         catch (HibernateException | IllegalArgumentException e) {
             responseEntity = ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -104,7 +106,7 @@ public class CampsiteRestController {
             return  ResponseEntity.status(HttpStatus.OK).body(availableDates);
         }
         catch (DateTimeParseException e) {
-            responseEntity = ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Please provide a valid format for the arrival and departure dates (YYYY-MM-DD).");
+            responseEntity = ResponseEntity.status(HttpStatus.BAD_REQUEST).body(DATE_ERROR_FORMAT);
         }
         catch (HibernateException | IllegalArgumentException e) {
             responseEntity = ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -125,7 +127,7 @@ public class CampsiteRestController {
             responseEntity = ResponseEntity.status(HttpStatus.OK).body("");
         }
         catch (DateTimeParseException e) {
-            responseEntity = ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Please provide a valid format for the arrival and departure dates (YYYY-MM-DD).");
+            responseEntity = ResponseEntity.status(HttpStatus.BAD_REQUEST).body(DATE_ERROR_FORMAT);
         }
         catch (HibernateException | IllegalArgumentException e) {
             responseEntity = ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());

@@ -15,6 +15,8 @@ import javax.persistence.PersistenceException;
 import java.time.LocalDate;
 import java.util.List;
 
+import static com.akash.campsite.utility.CampsiteMessagesUtil.*;
+
 /**
  * Created by Kash on 9/25/2018.
  */
@@ -53,7 +55,7 @@ public class CampsiteDAO {
                 transaction.rollback();
             }
             e.printStackTrace();
-            throw new HibernateException("An error occurred while attempting to cancel the booking. Please try again");
+            throw new HibernateException(BOOKING_ERROR_CANCEL_HIBERNATE + bookingId);
         } finally {
             session.close();
         }
@@ -84,7 +86,7 @@ public class CampsiteDAO {
                 transaction.rollback();
             }
             e.printStackTrace();
-            throw new HibernateException("An error occurred while attempting to create the booking. Please make sure the campsite is available on the given dates and try again.");
+            throw new HibernateException(BOOKING_ERROR_CREATE_HIBERNATE);
         } finally {
             session.close();
         }
@@ -115,7 +117,7 @@ public class CampsiteDAO {
                 transaction.rollback();
             }
             e.printStackTrace();
-            throw new HibernateException("An error occurred while trying to create the user. Please try again.");
+            throw new HibernateException(USER_CREATE_ERROR_HIBERNATE);
 
         } finally {
             session.close();
@@ -134,7 +136,6 @@ public class CampsiteDAO {
         final Session session = factory.openSession();
         final List<Booking> results;
         try {
-            //final String hql = "FROM Booking b WHERE (b.arrivalDate >= :arrivalDate AND b.departureDate < :departureDate";
             final String hql = "FROM Booking b WHERE (b.arrivalDate <= :arrivalDate AND :arrivalDate <= b.departureDate) OR " +
                     "(:arrivalDate <= b.arrivalDate AND b.arrivalDate <= :departureDate) OR " +
                     "(:arrivalDate <= b.arrivalDate AND :departureDate >= b.departureDate) OR" +
@@ -146,7 +147,7 @@ public class CampsiteDAO {
         }
         catch (HibernateException e) {
             e.printStackTrace();
-            throw new HibernateException("An error occurred while trying to retrieve the available dates. Please try again.");
+            throw new HibernateException(AVAILABILITY_ERROR_HIBERNATE);
         } finally {
             session.close();
         }
@@ -176,7 +177,7 @@ public class CampsiteDAO {
         }
         catch (HibernateException e) {
             e.printStackTrace();
-            throw new HibernateException("An error occurred while trying to search for the booking. Please try again.");
+            throw new HibernateException(BOOKING_ERROR_SEARCH_HIBERNATE + bookingId);
         } finally {
             session.close();
         }
@@ -206,7 +207,7 @@ public class CampsiteDAO {
         }
         catch (HibernateException e) {
             e.printStackTrace();
-            throw new HibernateException("An error occurred while trying to search for the user. Please try again.");
+            throw new HibernateException(USER_ERROR_SEARCH_HIBERNATE + email);
         } finally {
             session.close();
         }
@@ -227,7 +228,7 @@ public class CampsiteDAO {
             transaction = session.beginTransaction();
             Booking booking = (Booking)session.get(Booking.class, bookingId);
             if (booking == null) {
-                throw new NotFoundException("Cannot update the booking as it does not exist.");
+                throw new NotFoundException(BOOKING_ERROR_UPDATE_NON_EXISTENT);
             }
 
             booking.setArrivalDate(arrivalDate);
@@ -240,7 +241,7 @@ public class CampsiteDAO {
                 transaction.rollback();
             }
             e.printStackTrace();
-            throw new HibernateException("An error occurred while attempting to update the booking. Please make sure the campsite is available on the given dates and try again.");
+            throw new HibernateException(BOOKING_ERROR_UPDATE_HIBERNATE + bookingId);
         } finally {
             session.close();
         }
